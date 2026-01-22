@@ -1,5 +1,7 @@
+import asyncio
 import httpx
 from bs4 import BeautifulSoup
+from duckduckgo_search import DDGS
 from mcp.server import Server
 from mcp.server.stdio import stdio_server
 from mcp.types import Tool, TextContent
@@ -51,14 +53,58 @@ async def list_tools() -> list[Tool]:
                 "required": ["url"],
             },
         ),
+        Tool(
+            name="web_search",
+            description="Performs a web search using DuckDuckGo and returns titles with links.",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "query": {
+                        "type": "string",
+                        "description": "The search query",
+                    },
+                    "page": {
+                        "type": "integer",
+                        "description": "Page number (1-based). Default: 1",
+                        "default": 1,
+                    },
+                },
+                "required": ["query"],
+            },
+        ),
     ]
 
 
-@app.call_tool()
-async def call_tool(name: str, arguments: dict) -> list[TextContent]:
-    if name != "read_webpage":
-        return [TextContent(type="text", text=f"Unknown tool: {name}")]
+async def handle_web_search(arguments: dict) -> list[TextContent]:
+    query = arguments.get("query")
+    page = arguments.get("page", 1)
 
+    if not query:
+        return [TextContent(type="text", text="Error: query is required")]
+
+    try:
+        loop = asyncio.get_event_loop()
+        results = await loop.run_in_executor(
+            None,
+            lambda: DDGS().text(query, max_results=10 * page)
+        )
+
+        start_idx = (page - 1) * 10
+        page_results = results[start_idx:start_idx + 10] if results else []
+
+        if not page_results:
+            return [TextContent(type="text", text=f"No results found for: {query}")]
+
+        output = f"Search: {query} (page {page})\n\n"
+        for i, r in enumerate(page_results, 1):
+            output += f"{i}. {r['title']}\n   {r['href']}\n\n"
+
+        return [TextContent(type="text", text=output)]
+    except Exception as e:
+        return [TextContent(type="text", text=f"Error: {str(e)}")]
+
+
+async def handle_read_webpage(arguments: dict) -> list[TextContent]:
     url = arguments.get("url")
     max_chars = arguments.get("max_chars", DEFAULT_MAX_CHARS)
     offset = arguments.get("offset", 0)
@@ -109,6 +155,15 @@ async def call_tool(name: str, arguments: dict) -> list[TextContent]:
         return [TextContent(type="text", text=f"Error: HTTP {e.response.status_code} for {url}")]
     except Exception as e:
         return [TextContent(type="text", text=f"Error: {str(e)}")]
+
+
+@app.call_tool()
+async def call_tool(name: str, arguments: dict) -> list[TextContent]:
+    if name == "web_search":
+        return await handle_web_search(arguments)
+    if name == "read_webpage":
+        return await handle_read_webpage(arguments)
+    return [TextContent(type="text", text=f"Unknown tool: {name}")]
 
 
 async def main():

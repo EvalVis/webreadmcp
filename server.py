@@ -16,18 +16,31 @@ def extract_text(html: str) -> str:
     return "\n".join(lines)
 
 
+DEFAULT_MAX_CHARS = 500
+
+
 @app.list_tools()
 async def list_tools() -> list[Tool]:
     return [
         Tool(
             name="read_webpage",
-            description="Fetches a webpage via GET request and returns its text content. Strips HTML tags, scripts, and styles.",
+            description="Fetches a webpage via GET request and returns its text content. Strips HTML tags, scripts, and styles. Supports chunked reading for large pages.",
             inputSchema={
                 "type": "object",
                 "properties": {
                     "url": {
                         "type": "string",
                         "description": "The URL of the webpage to read",
+                    },
+                    "max_chars": {
+                        "type": "integer",
+                        "description": f"Maximum characters to return. Default: {DEFAULT_MAX_CHARS}",
+                        "default": DEFAULT_MAX_CHARS,
+                    },
+                    "offset": {
+                        "type": "integer",
+                        "description": "Starting character position for reading. Default: 0",
+                        "default": 0,
                     },
                     "raw_html": {
                         "type": "boolean",
@@ -47,6 +60,8 @@ async def call_tool(name: str, arguments: dict) -> list[TextContent]:
         return [TextContent(type="text", text=f"Unknown tool: {name}")]
 
     url = arguments.get("url")
+    max_chars = arguments.get("max_chars", DEFAULT_MAX_CHARS)
+    offset = arguments.get("offset", 0)
     raw_html = arguments.get("raw_html", False)
 
     if not url:
@@ -61,11 +76,31 @@ async def call_tool(name: str, arguments: dict) -> list[TextContent]:
             response.raise_for_status()
 
             content = response.text if raw_html else extract_text(response.text)
+            total_size = len(content)
+
+            if offset >= total_size:
+                return [
+                    TextContent(
+                        type="text",
+                        text=f"URL: {url}\nTotal size: {total_size} chars\nOffset {offset} exceeds content size.",
+                    )
+                ]
+
+            chunk = content[offset:offset + max_chars]
+            end_index = offset + len(chunk)
+
+            if total_size <= max_chars and offset == 0:
+                return [
+                    TextContent(
+                        type="text",
+                        text=f"URL: {url}\nTotal size: {total_size} chars\n\n{content}",
+                    )
+                ]
 
             return [
                 TextContent(
                     type="text",
-                    text=f"URL: {url}\nStatus: {response.status_code}\n\n{content}",
+                    text=f"URL: {url}\nTotal size: {total_size} chars\nShowing: {offset}-{end_index} of {total_size}\n\n{chunk}",
                 )
             ]
     except httpx.TimeoutException:

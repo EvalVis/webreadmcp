@@ -1,0 +1,43 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "webread-mcp"
+version = "1.0.1"
+description = "MCP server for reading webpages and web search"
+readme = "README.md"
+license = "MIT"
+requires-python = ">=3.10"
+authors = [
+    { name = "Your Name", email = "your@email.com" }
+]
+keywords = ["python", "model-context-protocol", "mcp", "search", "ai", "website-scraper"]
+classifiers = [
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+]
+dependencies = [
+    "mcp>=1.25.0",
+    "httpx>=0.28.1",
+    "beautifulsoup4>=4.14.3",
+    "duckduckgo_search>=8.1.1"
+]
+
+[project.urls]
+Homepage = "https://hashnode.programmersdiary.com/"
+Repository = "https://github.com/EvalVis/internetreadmcp"
+
+[project.scripts]
+webread-mcp = "server:main"
+
+[tool.hatch.build.targets.wheel]
+packages = ["webread_mcp"]
+include = ["server.py"]
+
+[tool.hatch.build.targets.sdist]
+include = ["server.py", "webread_mcp/"]

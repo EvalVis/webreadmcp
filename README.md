@@ -41,20 +41,38 @@ Performs a web search using DuckDuckGo and returns titles with links.
 
 ## Installation
 
-1. Clone the repository:
+### From PyPI
+
+```bash
+pip install webread-mcp
+```
+
+### From Source
+
 ```bash
 git clone <repository-url>
 cd webreadmcp
-```
-
-2. Install dependencies:
-```bash
-pip install -r requirements.txt
+pip install -e .
 ```
 
 ## Configuration
 
 Add the server to your MCP client configuration:
+
+### If installed via pip
+
+```json
+{
+  "mcpServers": {
+    "webread": {
+      "command": "python",
+      "args": ["-m", "webread_mcp"]
+    }
+  }
+}
+```
+
+### If running from source
 
 ```json
 {
@@ -69,7 +87,11 @@ Add the server to your MCP client configuration:
 
 ## Running Manually
 
-To test the server:
+```bash
+python -m webread_mcp
+```
+
+Or from source:
 
 ```bash
 python server.py

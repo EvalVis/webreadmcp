@@ -6,7 +6,12 @@ from mcp.server import Server
 from mcp.server.stdio import stdio_server
 from mcp.types import Tool, TextContent
 
+__version__ = "1.0.1"
+
 app = Server("webread")
+
+DEFAULT_MAX_CHARS = 500
+RESULTS_PER_PAGE = 10
 
 
 def extract_text(html: str) -> str:
@@ -16,9 +21,6 @@ def extract_text(html: str) -> str:
     text = soup.get_text(separator="\n", strip=True)
     lines = [line.strip() for line in text.splitlines() if line.strip()]
     return "\n".join(lines)
-
-
-DEFAULT_MAX_CHARS = 500
 
 
 @app.list_tools()
@@ -73,9 +75,6 @@ async def list_tools() -> list[Tool]:
             },
         ),
     ]
-
-
-RESULTS_PER_PAGE = 10
 
 
 async def handle_web_search(arguments: dict) -> list[TextContent]:
@@ -171,11 +170,14 @@ async def call_tool(name: str, arguments: dict) -> list[TextContent]:
     return [TextContent(type="text", text=f"Unknown tool: {name}")]
 
 
-async def main():
+async def run_server():
     async with stdio_server() as (read_stream, write_stream):
         await app.run(read_stream, write_stream, app.create_initialization_options())
 
 
+def main():
+    asyncio.run(run_server())
+
+
 if __name__ == "__main__":
-    import asyncio
-    asyncio.run(main())
+    main()

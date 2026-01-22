@@ -75,6 +75,9 @@ async def list_tools() -> list[Tool]:
     ]
 
 
+RESULTS_PER_PAGE = 10
+
+
 async def handle_web_search(arguments: dict) -> list[TextContent]:
     query = arguments.get("query")
     page = arguments.get("page", 1)
@@ -86,16 +89,18 @@ async def handle_web_search(arguments: dict) -> list[TextContent]:
         loop = asyncio.get_event_loop()
         results = await loop.run_in_executor(
             None,
-            lambda: DDGS().text(query, max_results=10 * page)
+            lambda: DDGS().text(query, max_results=RESULTS_PER_PAGE * page)
         )
 
-        start_idx = (page - 1) * 10
-        page_results = results[start_idx:start_idx + 10] if results else []
+        total_results = len(results) if results else 0
+        start_idx = (page - 1) * RESULTS_PER_PAGE
+        end_idx = min(start_idx + RESULTS_PER_PAGE, total_results)
+        page_results = results[start_idx:end_idx] if results else []
 
         if not page_results:
-            return [TextContent(type="text", text=f"No results found for: {query}")]
+            return [TextContent(type="text", text=f"No results found for: {query} (page {page})")]
 
-        output = f"Search: {query} (page {page})\n\n"
+        output = f"Search: {query} (page {page}, showing {start_idx + 1}-{end_idx} of {total_results})\n\n"
         for i, r in enumerate(page_results, 1):
             output += f"{i}. {r['title']}\n   {r['href']}\n\n"
 

@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "webread-mcp"
-version = "1.0.3"
+version = "1.0.4"
 description = "MCP server for reading webpages and web search"
 readme = "README.md"
 license = "MIT"

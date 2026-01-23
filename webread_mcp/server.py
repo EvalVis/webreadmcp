@@ -1,4 +1,5 @@
 import asyncio
+import os
 import httpx
 from bs4 import BeautifulSoup
 from duckduckgo_search import DDGS
@@ -6,12 +7,30 @@ from mcp.server import Server
 from mcp.server.stdio import stdio_server
 from mcp.types import Tool, TextContent
 
-__version__ = "1.0.3"
+__version__ = "1.0.4"
 
 app = Server("webread")
 
 DEFAULT_MAX_CHARS = 500
 RESULTS_PER_PAGE = 10
+
+
+def get_ssl_context():
+    """
+    Get SSL verification setting from environment.
+    
+    Environment variables:
+    - SSL_CERT_FILE: Path to custom CA bundle (e.g., corporate certificate)
+    - WEBREAD_VERIFY_SSL: Set to "false" to disable SSL verification (not recommended)
+    """
+    if os.environ.get("WEBREAD_VERIFY_SSL", "").lower() == "false":
+        return False
+    
+    ca_bundle = os.environ.get("SSL_CERT_FILE")
+    if ca_bundle and os.path.exists(ca_bundle):
+        return ca_bundle
+    
+    return True
 
 
 def extract_text(html: str) -> str:
@@ -121,7 +140,8 @@ async def handle_read_webpage(arguments: dict) -> list[TextContent]:
         url = "https://" + url
 
     try:
-        async with httpx.AsyncClient(follow_redirects=True, timeout=30.0) as client:
+        ssl_verify = get_ssl_context()
+        async with httpx.AsyncClient(follow_redirects=True, timeout=30.0, verify=ssl_verify) as client:
             response = await client.get(url)
             response.raise_for_status()
 

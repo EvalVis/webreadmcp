@@ -72,18 +72,6 @@ Add the server to your MCP client configuration:
 }
 ```
 
-### If running from source
-
-```json
-{
-  "mcpServers": {
-    "webread": {
-      "command": "python",
-      "args": ["/absolute/path/to/webreadmcp/server.py"]
-    }
-  }
-}
-```
 
 ## Running Manually
 
@@ -91,13 +79,39 @@ Add the server to your MCP client configuration:
 python -m webread_mcp
 ```
 
-Or from source:
+The server communicates via stdio and will wait for MCP protocol messages.
 
-```bash
-python server.py
+### Custom CA Bundle
+
+```json
+{
+  "mcpServers": {
+    "webread": {
+      "command": "python",
+      "args": ["-m", "webread_mcp"],
+      "env": {
+        "SSL_CERT_FILE": "/path/to/corporate-ca-bundle.crt"
+      }
+    }
+  }
+}
 ```
 
-The server communicates via stdio and will wait for MCP protocol messages.
+### Disable SSL Verification (Not Recommended)
+
+```json
+{
+  "mcpServers": {
+    "webread": {
+      "command": "python",
+      "args": ["-m", "webread_mcp"],
+      "env": {
+        "WEBREAD_VERIFY_SSL": "false"
+      }
+    }
+  }
+}
+```
 
 ## Dependencies
 

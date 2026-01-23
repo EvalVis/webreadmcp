@@ -6,7 +6,7 @@ from mcp.server import Server
 from mcp.server.stdio import stdio_server
 from mcp.types import Tool, TextContent
 
-__version__ = "1.0.2"
+__version__ = "1.0.3"
 
 app = Server("webread")
 

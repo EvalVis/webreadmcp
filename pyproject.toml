@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "webread-mcp"
-version = "1.0.2"
+version = "1.0.3"
 description = "MCP server for reading webpages and web search"
 readme = "README.md"
 license = "MIT"
@@ -33,11 +33,7 @@ Homepage = "https://hashnode.programmersdiary.com/"
 Repository = "https://github.com/EvalVis/webreadmcp"
 
 [project.scripts]
-webread-mcp = "server:main"
+webread-mcp = "webread_mcp:main"
 
 [tool.hatch.build.targets.wheel]
 packages = ["webread_mcp"]
-include = ["server.py"]
-
-[tool.hatch.build.targets.sdist]
-include = ["server.py", "webread_mcp/"]

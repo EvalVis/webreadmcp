@@ -33,7 +33,7 @@ while IFS= read -r line; do
   [ -z "$line" ] && continue
 
   url=$(echo "$line" | sed 's/.*href="\([^"]*\)".*/\1/')
-  title=$(echo "$line" | sed 's/.*">//')
+  title=$(echo "$line" | sed 's/.*">//' | sed "s/&#x27;/'/g; s/&amp;/\&/g; s/&lt;/</g; s/&gt;/>/g; s/&quot;/\"/g; s/&#39;/'/g")
 
   if [ -n "$url" ] && [ -n "$title" ]; then
     count=$((count + 1))

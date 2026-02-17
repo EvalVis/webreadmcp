@@ -34,7 +34,7 @@ $i = 0
 foreach ($m in $matches) {
     $i++
     $url = $m.Groups[1].Value
-    $title = $m.Groups[2].Value
+    $title = [System.Net.WebUtility]::HtmlDecode($m.Groups[2].Value)
     Write-Host ("{0}. {1}" -f $i, $title)
     Write-Host ("   {0}" -f $url)
     Write-Host ""

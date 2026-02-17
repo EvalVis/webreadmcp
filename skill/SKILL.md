@@ -15,7 +15,7 @@ Use the appropriate script for the OS. Pass the query and an optional search pag
 bash skill/scripts/linux/web_search.sh "your search query" [page]
 ```
 
-**Windows (CMD or PowerShell):**
+**Windows:**
 
 ```bat
 skill\scripts\windows\web_search.bat "your search query" [page]
@@ -24,7 +24,7 @@ skill\scripts\windows\web_search.bat "your search query" [page]
 **Examples:**
 
 ```bash
-bash skill/linux/scripts/web_search.sh "rust async tutorial"
+bash skill/scripts/linux/web_search.sh "rust async tutorial"
 skill\scripts\windows\web_search.bat "python web frameworks" 2
 ```
 
@@ -32,29 +32,37 @@ Returns numbered titles with links.
 
 ## Reading a Webpage
 
-Use curl directly to fetch and strip HTML:
+**Linux / macOS / Git Bash:**
 
 ```bash
 curl -s -L -A "Mozilla/5.0" "https://example.com" | sed 's/<script[^>]*>.*<\/script>//g; s/<style[^>]*>.*<\/style>//g; s/<[^>]*>//g; /^$/d'
 ```
 
-On Windows (PowerShell), use `curl.exe` instead of `curl`:
+**Windows:**
+Note: the below command can be executed on CMD if before the command you type: powershell -NoProfile -Command and envelop the command in parenthesis
 
 ```powershell
 (curl.exe -s -L -A "Mozilla/5.0" "https://example.com") -replace '<script[^>]*>.*?</script>','' -replace '<style[^>]*>.*?</style>','' -replace '<[^>]*>','' | Where-Object { $_.Trim() }
 ```
 
-For raw HTML:
+## Raw HTML
+
+**Linux / macOS / Git Bash:**
 
 ```bash
 curl -s -L -A "Mozilla/5.0" "https://example.com"
+```
+
+**Windows:**
+
+```powershell
+curl.exe -s -L -A "Mozilla/5.0" "https://example.com"
 ```
 
 ## Requirements
 
 - `curl` (pre-installed on modern Windows, macOS, and Linux)
 - **Linux/macOS:** `bash`
-- **Windows:** `PowerShell` (used by the `.bat` wrapper)
 
 ## Installation
 

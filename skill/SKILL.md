@@ -40,7 +40,8 @@ curl -s -L -A "Mozilla/5.0" "https://example.com" | sed 's/<script[^>]*>.*<\/scr
 
 **Windows:**
 
-<b>Note</b>: the below command can be executed on CMD if before the command you type: powershell -NoProfile -Command and envelop the command in parenthesis
+<b>Note</b>: the below command can be executed on CMD if before the command you type: `powershell -NoProfile -Command` and envelop the command in parenthesis
+
 
 ```powershell
 (curl.exe -s -L -A "Mozilla/5.0" "https://example.com") -replace '<script[^>]*>.*?</script>','' -replace '<style[^>]*>.*?</style>','' -replace '<[^>]*>','' | Where-Object { $_.Trim() }

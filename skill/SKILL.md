@@ -58,4 +58,4 @@ curl -s -L -A "Mozilla/5.0" "https://example.com"
 
 ## Installation
 
-Copy the `skill/` folder into `~/.cursor/skills/webread/` for personal use across all projects, or into `.cursor/skills/webread/` for a single project.
+Copy the `skill/` folder into your AI context folder.

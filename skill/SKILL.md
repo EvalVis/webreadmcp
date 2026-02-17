@@ -32,6 +32,8 @@ Returns numbered titles with links.
 
 ## Reading a Webpage
 
+### Non-raw HTML
+
 **Linux / macOS / Git Bash:**
 
 ```bash
@@ -47,7 +49,7 @@ curl -s -L -A "Mozilla/5.0" "https://example.com" | sed 's/<script[^>]*>.*<\/scr
 (curl.exe -s -L -A "Mozilla/5.0" "https://example.com") -replace '<script[^>]*>.*?</script>','' -replace '<style[^>]*>.*?</style>','' -replace '<[^>]*>','' | Where-Object { $_.Trim() }
 ```
 
-## Raw HTML
+### Raw HTML
 
 **Linux / macOS / Git Bash:**
 

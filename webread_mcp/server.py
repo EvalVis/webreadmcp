@@ -1,36 +1,26 @@
 import asyncio
-import os
-import httpx
 from bs4 import BeautifulSoup
-from duckduckgo_search import DDGS
 from mcp.server import Server
 from mcp.server.stdio import stdio_server
 from mcp.types import Tool, TextContent
+from urllib.parse import quote_plus
 
-__version__ = "1.0.4"
+__version__ = "1.3.0"
 
 app = Server("webread")
 
 DEFAULT_MAX_CHARS = 500
-RESULTS_PER_PAGE = 10
+USER_AGENT = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36"
 
 
-def get_ssl_context():
-    """
-    Get SSL verification setting from environment.
-    
-    Environment variables:
-    - SSL_CERT_FILE: Path to custom CA bundle (e.g., corporate certificate)
-    - WEBREAD_VERIFY_SSL: Set to "false" to disable SSL verification (not recommended)
-    """
-    if os.environ.get("WEBREAD_VERIFY_SSL", "").lower() == "false":
-        return False
-    
-    ca_bundle = os.environ.get("SSL_CERT_FILE")
-    if ca_bundle and os.path.exists(ca_bundle):
-        return ca_bundle
-    
-    return True
+async def run_curl(args: list[str]) -> tuple[str, int]:
+    proc = await asyncio.create_subprocess_exec(
+        "curl", *args,
+        stdout=asyncio.subprocess.PIPE,
+        stderr=asyncio.subprocess.PIPE,
+    )
+    stdout, _ = await asyncio.wait_for(proc.communicate(), timeout=30.0)
+    return stdout.decode("utf-8", errors="replace"), proc.returncode
 
 
 def extract_text(html: str) -> str:
@@ -42,12 +32,23 @@ def extract_text(html: str) -> str:
     return "\n".join(lines)
 
 
+def parse_search_results(html: str) -> list[dict]:
+    soup = BeautifulSoup(html, "html.parser")
+    results = []
+    for a in soup.select("a.result__a"):
+        title = a.get_text(strip=True)
+        url = a.get("href", "")
+        if title and url:
+            results.append({"title": title, "href": url})
+    return results
+
+
 @app.list_tools()
 async def list_tools() -> list[Tool]:
     return [
         Tool(
             name="read_webpage",
-            description="Fetches a webpage via GET request and returns its text content. Strips HTML tags, scripts, and styles. Supports chunked reading for large pages.",
+            description="Fetches a webpage via curl and returns its text content. Strips HTML tags, scripts, and styles. Supports chunked reading for large pages.",
             inputSchema={
                 "type": "object",
                 "properties": {
@@ -104,25 +105,36 @@ async def handle_web_search(arguments: dict) -> list[TextContent]:
         return [TextContent(type="text", text="Error: query is required")]
 
     try:
-        loop = asyncio.get_event_loop()
-        results = await loop.run_in_executor(
-            None,
-            lambda: DDGS().text(query, max_results=RESULTS_PER_PAGE * page)
-        )
+        encoded_query = quote_plus(query)
+        post_data = f"q={encoded_query}"
+        if page > 1:
+            offset = (page - 1) * 30
+            post_data += f"&s={offset}&dc={offset + 1}&o=json&api=d.js"
 
-        total_results = len(results) if results else 0
-        start_idx = (page - 1) * RESULTS_PER_PAGE
-        end_idx = min(start_idx + RESULTS_PER_PAGE, total_results)
-        page_results = results[start_idx:end_idx] if results else []
+        html, returncode = await run_curl([
+            "-s", "-L",
+            "-A", USER_AGENT,
+            "-X", "POST",
+            "-d", post_data,
+            "https://html.duckduckgo.com/html/",
+        ])
 
-        if not page_results:
+        if returncode != 0:
+            return [TextContent(type="text", text=f"Error: curl failed with code {returncode}")]
+
+        results = parse_search_results(html)
+
+        if not results:
             return [TextContent(type="text", text=f"No results found for: {query} (page {page})")]
 
-        output = f"Search: {query} (page {page}, showing {start_idx + 1}-{end_idx} of {total_results})\n\n"
-        for i, r in enumerate(page_results, 1):
+        total = len(results)
+        output = f"Search: {query} (page {page}, {total} results)\n\n"
+        for i, r in enumerate(results, 1):
             output += f"{i}. {r['title']}\n   {r['href']}\n\n"
 
         return [TextContent(type="text", text=output)]
+    except asyncio.TimeoutError:
+        return [TextContent(type="text", text="Error: Search request timed out")]
     except Exception as e:
         return [TextContent(type="text", text=f"Error: {str(e)}")]
 
@@ -140,43 +152,45 @@ async def handle_read_webpage(arguments: dict) -> list[TextContent]:
         url = "https://" + url
 
     try:
-        ssl_verify = get_ssl_context()
-        async with httpx.AsyncClient(follow_redirects=True, timeout=30.0, verify=ssl_verify) as client:
-            response = await client.get(url)
-            response.raise_for_status()
+        html, returncode = await run_curl([
+            "-s", "-L",
+            "-A", USER_AGENT,
+            url,
+        ])
 
-            content = response.text if raw_html else extract_text(response.text)
-            total_size = len(content)
+        if returncode != 0:
+            return [TextContent(type="text", text=f"Error: curl failed with code {returncode} for {url}")]
 
-            if offset >= total_size:
-                return [
-                    TextContent(
-                        type="text",
-                        text=f"URL: {url}\nTotal size: {total_size} chars\nOffset {offset} exceeds content size.",
-                    )
-                ]
+        content = html if raw_html else extract_text(html)
+        total_size = len(content)
 
-            chunk = content[offset:offset + max_chars]
-            end_index = offset + len(chunk)
-
-            if total_size <= max_chars and offset == 0:
-                return [
-                    TextContent(
-                        type="text",
-                        text=f"URL: {url}\nTotal size: {total_size} chars\n\n{content}",
-                    )
-                ]
-
+        if offset >= total_size:
             return [
                 TextContent(
                     type="text",
-                    text=f"URL: {url}\nTotal size: {total_size} chars\nShowing: {offset}-{end_index} of {total_size}\n\n{chunk}",
+                    text=f"URL: {url}\nTotal size: {total_size} chars\nOffset {offset} exceeds content size.",
                 )
             ]
-    except httpx.TimeoutException:
+
+        chunk = content[offset:offset + max_chars]
+        end_index = offset + len(chunk)
+
+        if total_size <= max_chars and offset == 0:
+            return [
+                TextContent(
+                    type="text",
+                    text=f"URL: {url}\nTotal size: {total_size} chars\n\n{content}",
+                )
+            ]
+
+        return [
+            TextContent(
+                type="text",
+                text=f"URL: {url}\nTotal size: {total_size} chars\nShowing: {offset}-{end_index} of {total_size}\n\n{chunk}",
+            )
+        ]
+    except asyncio.TimeoutError:
         return [TextContent(type="text", text=f"Error: Request timed out for {url}")]
-    except httpx.HTTPStatusError as e:
-        return [TextContent(type="text", text=f"Error: HTTP {e.response.status_code} for {url}")]
     except Exception as e:
         return [TextContent(type="text", text=f"Error: {str(e)}")]
 

@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "webread-mcp"
-version = "1.0.4"
+version = "1.3.0"
 description = "MCP server for reading webpages and web search"
 readme = "README.md"
 license = "MIT"
@@ -23,9 +23,7 @@ classifiers = [
 ]
 dependencies = [
     "mcp>=1.25.0",
-    "httpx>=0.28.1",
     "beautifulsoup4>=4.14.3",
-    "duckduckgo_search>=8.1.1"
 ]
 
 [project.urls]
